@@ -1,0 +1,76 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ap1-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ap1
+      MYSQL_USER: ap1
+      MYSQL_PASSWORD: ap1
+    ports:
+      - "3307:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uap1", "-pap1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ap1-qdrant
+    ports:
+      - "6333:6333"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333 && echo ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: ap1-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+    container_name: ap1-app
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: dev
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: ap1
+      MYSQL_PASSWORD: ap1
+      MYSQL_DB: ap1
+      QDRANT_URL: http://qdrant:6333
+      REDIS_URL: redis://redis:6379/0
+      # 模型/搜索密钥由宿主 .env 或环境注入；未配则对话对无法联网的查询体面兜底
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-ds-v4-flash}
+      SEARCH_BASE_URL: ${SEARCH_BASE_URL:-https://api.tavily.com}
+      SEARCH_API_KEY: ${SEARCH_API_KEY:-}
+      EMBED_PROVIDER: ${EMBED_PROVIDER:-local}
+      EMBED_MODEL: ${EMBED_MODEL:-}
+      EMBED_BASE_URL: ${EMBED_BASE_URL:-}
+      EMBED_API_KEY: ${EMBED_API_KEY:-}
+      EMBED_DIM: "512"
+      WINDOW_TOKEN_BUDGET: ${WINDOW_TOKEN_BUDGET:-6000}
+      KEEP_RECENT_TURNS: "10"
+      MAX_RUN_STEPS: "8"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

@@ -1,0 +1,23 @@
+:root {
+  --bg: #ededed;
+  --header: #202124;
+  --bubble-mine: #95ec69;
+  --bubble-other: #ffffff;
+  --text: #1c1c1e;
+  --muted: #8a8a8e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
