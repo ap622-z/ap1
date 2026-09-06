@@ -1,4 +1,4 @@
-# 环境 / 密钥
+# 环境 / 密钥（.env.example 是模板，需保留）
 .env
 *.env
 .env.*
@@ -7,11 +7,16 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 .venv/
+venv/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.coverage
+htmlcov/
+.tox/
 
 # 前端
 frontend/node_modules/
@@ -20,3 +25,11 @@ frontend/dist/
 # 运行日志 / 临时
 *.log
 tmp/
+
+# 编辑器 / 操作系统
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
