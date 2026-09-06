@@ -5,8 +5,10 @@ __pycache__
 **/__pycache__
 *.pyc
 .env
-doc
 tests
 frontend/node_modules
 frontend/dist
 *.log
+# doc/ 整体不进镜像，但 doc/asset/（摄入素材）需要——见下方 ! 例外
+doc
+!doc/asset/

@@ -22,6 +22,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-editable
 
 COPY app ./app
+# 摄入素材打进镜像：空知识库启动时自动灌入（seed_on_startup）
+COPY doc/asset ./doc/asset
 COPY --from=frontend /fe/dist ./frontend/dist
 
 EXPOSE 8000

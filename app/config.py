@@ -49,12 +49,13 @@ class Settings(BaseSettings):
 
     # ---- 向量化（嵌入）----
     # local：离线确定性字符 n-gram（默认，供开发 / 测试 / 无密钥时使用）
-    # openai_compatible：指向任一 OpenAI 兼容 /embeddings 端点
+    # openai_compatible：指向 OpenAI 兼容 /embeddings 端点（如硅基流动 SiliconFlow，模型 bge-m3）
     embed_provider: str = "local"
-    embed_model: str = ""
-    embed_base_url: str = ""
+    embed_model: str = ""  # 例：BAAI/bge-m3
+    embed_base_url: str = ""  # 例：https://api.siliconflow.cn/v1
     embed_api_key: str = ""
-    embed_dim: int = 512
+    embed_dim: int = 1024  # local 提供方的本地向量维度；远程维度由首个请求自动探测
+    embed_max_input_chars: int = 6000  # 超长文本截断上限，避免超模型 token 上限
 
     # ---- 上下文窗口与压缩 ----
     window_token_budget: int = 6000  # summary + 边界后全部轮次的总预算
@@ -68,6 +69,7 @@ class Settings(BaseSettings):
     # ---- 其它 ----
     register_nickname_prefix: str = "星辰"
     auth_token_ttl_days: int = 365
+    seed_on_startup: bool = True  # 容器启动时若知识库为空自动摄入素材，开箱即用
 
 
 @lru_cache

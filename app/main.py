@@ -23,16 +23,33 @@ from app.logging_setup import setup_logging
 _FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 
 
+_log = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    global _log
     settings = get_settings()
     setup_logging(settings)
+    from app.logging_setup import get_logger
+
+    _log = get_logger("startup")
     # 骨架启动：幂等 DDL（dev 直接应用，与 docker compose 初始化同步）
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, migrate, settings)
     engine = create_async_engine_for(settings)
     runtime = build_runtime(settings, engine)
-    await runtime.vector.ensure_collection()
+    await runtime.vector.ensure_collection(await runtime.embedder.ensure_dim())
+    # 容器自包含：知识库为空时自动摄入（幂等），做到 docker compose up 即开即用
+    if settings.seed_on_startup and await runtime.repo.count_idol_infos() == 0:
+        from app.cli.ingest import ingest_knowledge
+
+        _log.info("knowledge_empty_seed_start")
+        try:
+            await ingest_knowledge(engine, settings, log=_log)
+            _log.info("knowledge_seeded")
+        except Exception:
+            _log.exception("knowledge_seed_failed_continue_booting")
     app.state.runtime = runtime
     try:
         yield

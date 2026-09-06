@@ -317,12 +317,13 @@ def test_stale_knowledge_not_recalled_after_removal(e2e, db):
         eng = create_async_engine_for(s)
         emb = build_embedder(s)
         vec = VectorStore(s)
-        await vec.ensure_collection()
+        await vec.ensure_collection(await emb.ensure_dim())
         repo = Repository(eng, s, emb, vec)
         rows = await repo.upsert_idol_infos([{"tag": "粉丝互动", "content": content}])
         r = rows[0]
+        vecs = await emb.embed([content])
         await vec.upsert_vectors(
-            [(point_id(KIND_IDOL_INFO, r.id), emb.embed([content])[0],
+            [(point_id(KIND_IDOL_INFO, r.id), vecs[0],
               {"kind": KIND_IDOL_INFO, "row_id": r.id, "content_hash": r.content_hash})]
         )
         before = await repo.search_knowledge("团子小狗", limit=3)

@@ -94,7 +94,7 @@ def _seed_knowledge(env: dict) -> None:
         eng = create_async_engine_for(s)
         emb = build_embedder(s)
         vec = VectorStore(s)
-        await vec.recreate_collection()
+        await vec.recreate_collection(await emb.ensure_dim())
         repo = Repository(eng, s, emb, vec)
         # DB 行（幂等 upsert，重跑不重复）
         await repo.upsert_idol_infos([{"tag": t, "content": c} for t, c in _SEED_INFOS])
@@ -103,38 +103,33 @@ def _seed_knowledge(env: dict) -> None:
         sid = songs[0].id if songs else None
         if sid is not None:
             await repo.replace_lyrics_for_song(sid, [_SEED_LYRIC])
-        # 向量：以 DB 活跃集合为准全量写（等价生产 reconcile，重跑也自洽）
+        # 向量：以 DB 活跃集合为准全量写（批量向量化，等价生产 reconcile）
+        plan: list[tuple[int, str, str]] = []  # (pid, kind, content_hash) — text 存临时对照
+        text_by_pid: dict[int, str] = {}
         for r in await repo.list_all_idol_infos():
-            await vec.upsert_vectors(
-                [
-                    (
-                        point_id(KIND_IDOL_INFO, r.id),
-                        emb.embed([r.content])[0],
-                        {"kind": KIND_IDOL_INFO, "row_id": r.id, "content_hash": r.content_hash},
-                    )
-                ]
-            )
+            pid = point_id(KIND_IDOL_INFO, r.id)
+            plan.append((pid, KIND_IDOL_INFO, r.content_hash))
+            text_by_pid[pid] = r.content
         for srow in await repo.list_all_songs():
             if srow.intro:
-                await vec.upsert_vectors(
-                    [
-                        (
-                            point_id(KIND_SONG, srow.id),
-                            emb.embed([srow.intro])[0],
-                            {"kind": KIND_SONG, "row_id": srow.id, "content_hash": srow.content_hash},
-                        )
-                    ]
-                )
+                pid = point_id(KIND_SONG, srow.id)
+                plan.append((pid, KIND_SONG, srow.content_hash))
+                text_by_pid[pid] = srow.intro
             for lr in await repo.list_lyrics_of_song(srow.id):
-                await vec.upsert_vectors(
-                    [
-                        (
-                            point_id(KIND_LYRIC, lr.id),
-                            emb.embed([lr.content])[0],
-                            {"kind": KIND_LYRIC, "row_id": lr.id, "content_hash": lr.content_hash},
-                        )
-                    ]
+                pid = point_id(KIND_LYRIC, lr.id)
+                plan.append((pid, KIND_LYRIC, lr.content_hash))
+                text_by_pid[pid] = lr.content
+        vectors = await emb.embed([text_by_pid[p] for p, _, _ in plan])
+        await vec.upsert_vectors(
+            [
+                (
+                    pid,
+                    vectors[i],
+                    {"kind": kind, "row_id": pid - point_id(kind, 0), "content_hash": ch},
                 )
+                for i, (pid, kind, ch) in enumerate(plan)
+            ]
+        )
         await eng.dispose()
         await vec.close()
 

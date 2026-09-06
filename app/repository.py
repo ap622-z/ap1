@@ -490,7 +490,7 @@ class Repository:
 
         读路径：qdrant ANN 返回候选 id → 回 MySQL 按 id 校验（行存在、hash 匹配、status 上架）。
         """
-        vec = self._embedder.embed([query])[0]
+        vec = (await self._embedder.embed([query]))[0]
         hits = await self._vector.search(vec, limit=limit)
         results: list[dict[str, Any]] = []
         async with self._engine.connect() as conn:
@@ -778,6 +778,13 @@ class Repository:
                     {"now": now, "id": sid},
                 )
         return out
+
+    async def count_idol_infos(self) -> int:
+        async with self._engine.connect() as conn:
+            res = await conn.execute(
+                text("SELECT COUNT(*) FROM idol_infos WHERE status = 1")
+            )
+            return int(res.scalar_one())
 
     async def list_all_idol_infos(self) -> list[IdolInfoRow]:
         async with self._engine.connect() as conn:

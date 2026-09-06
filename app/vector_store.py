@@ -38,32 +38,31 @@ class VectorStore:
             self._client = AsyncQdrantClient(url=self._settings.qdrant_url)
         return self._client
 
-    async def ensure_collection(self) -> None:
+    async def _create(self, dim: int) -> None:
+        c = await self._client_or()
+        await c.create_collection(
+            collection_name=self._settings.qdrant_collection,
+            vectors_config=models.VectorParams(size=dim, distance=models.Distance.COSINE),
+        )
+
+    async def ensure_collection(self, dim: int) -> None:
+        """确保集合存在且维度与 embedder 实际输出一致；维度不符则重建。"""
         c = await self._client_or()
         name = self._settings.qdrant_collection
-        exists = await c.collection_exists(name)
-        if not exists:
-            await c.create_collection(
-                collection_name=name,
-                vectors_config=models.VectorParams(
-                    size=self._settings.embed_dim,
-                    distance=models.Distance.COSINE,
-                ),
-            )
+        if await c.collection_exists(name):
+            info = await c.get_collection(collection_name=name)
+            if info.config.params.vectors.size != dim:
+                await self.recreate_collection(dim)
+            return
+        await self._create(dim)
 
-    async def recreate_collection(self) -> None:
-        """摄入前置：整库重建（种子级，幂等重跑前清空旧点）。"""
+    async def recreate_collection(self, dim: int) -> None:
+        """摄入前置：整库重建（种子级，幂等重跑前清空旧点，维度取 embedder 实际值）。"""
         c = await self._client_or()
         name = self._settings.qdrant_collection
         if await c.collection_exists(name):
             await c.delete_collection(collection_name=name)
-        await c.create_collection(
-            collection_name=name,
-            vectors_config=models.VectorParams(
-                size=self._settings.embed_dim,
-                distance=models.Distance.COSINE,
-            ),
-        )
+        await self._create(dim)
 
     async def upsert_vectors(
         self, points: list[tuple[int, list[float], dict[str, Any]]]

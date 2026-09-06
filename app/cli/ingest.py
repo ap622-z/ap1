@@ -17,7 +17,7 @@ from pathlib import Path
 
 import openpyxl
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.db import create_async_engine_for, migrate
 from app.embeddings import build_embedder
 from app.repository import Repository
@@ -162,29 +162,35 @@ def merge_song_assets() -> list[SongAsset]:
 async def _reconcile_vectors(repo: Repository, vector: VectorStore, embedder) -> tuple[int, int]:
     """DB 活跃集合 ↔ qdrant 全量对账：重写活跃向量 + 删除孤儿/过期点。
 
-    返回 (upsert_points, deleted_points)。
+    文本先收集、再批量向量化（远程提供方按批次请求），返回 (upsert_points, deleted_points)。
     """
-    active: dict[int, tuple[str, str, list[float]]] = {}  # pid -> (kind, content_hash, vec)
+    # pid -> (kind, content_hash, text)
+    active: dict[int, tuple[str, str, str]] = {}
 
-    infos = await repo.list_all_idol_infos()
-    for r in infos:
-        pid = point_id(KIND_IDOL_INFO, r.id)
-        active[pid] = (KIND_IDOL_INFO, r.content_hash, embedder.embed([r.content])[0])
-
-    songs = await repo.list_all_songs()
-    for s in songs:
+    for r in await repo.list_all_idol_infos():
+        active[point_id(KIND_IDOL_INFO, r.id)] = (KIND_IDOL_INFO, r.content_hash, r.content)
+    for s in await repo.list_all_songs():
         if s.intro:
-            pid = point_id(KIND_SONG, s.id)
-            active[pid] = (KIND_SONG, s.content_hash, embedder.embed([s.intro])[0])
-
-    for s in songs:
+            active[point_id(KIND_SONG, s.id)] = (KIND_SONG, s.content_hash, s.intro)
         for lr in await repo.list_lyrics_of_song(s.id):
-            pid = point_id(KIND_LYRIC, lr.id)
-            active[pid] = (KIND_LYRIC, lr.content_hash, embedder.embed([lr.content])[0])
+            active[point_id(KIND_LYRIC, lr.id)] = (KIND_LYRIC, lr.content_hash, lr.content)
+
+    # 批量向量化：一次取一批文本，保持与 pid 同序
+    pids = list(active.keys())
+    texts = [active[p][2] for p in pids]
+    vectors = await embedder.embed(texts) if texts else []
 
     points = [
-        (pid, vec, {"kind": kind, "row_id": pid - point_id(kind, 0), "content_hash": h})
-        for pid, (kind, h, vec) in active.items()
+        (
+            pid,
+            vectors[i],
+            {
+                "kind": active[pid][0],
+                "row_id": pid - point_id(active[pid][0], 0),
+                "content_hash": active[pid][1],
+            },
+        )
+        for i, pid in enumerate(pids)
     ]
     await vector.upsert_vectors(points)
 
@@ -213,26 +219,39 @@ async def run() -> None:
     embedder = build_embedder(settings)
     vector = VectorStore(settings)
     try:
-        await vector.ensure_collection()
-        await vector.recreate_collection()
-        await _run_body(engine, embedder, vector)
+        await vector.recreate_collection(await embedder.ensure_dim())
+        await _run_body(engine, embedder, vector, settings)
     finally:
         await engine.dispose()
         await vector.close()
 
 
-async def _run_body(engine, embedder, vector) -> None:
-    settings = get_settings()
+async def ingest_knowledge(engine, settings: Settings, *, log=None) -> None:
+    """在既有进程/引擎内执行摄入（容器 boot、运维脚本复用）。
+
+    幂等：DB 行按 content_hash / (song_id, seg_no) 幂等；qdrant 全量对账。
+    """
+    embedder = build_embedder(settings)
+    vector = VectorStore(settings)
+    say = log.info if log is not None else print
+    try:
+        await vector.recreate_collection(await embedder.ensure_dim())
+        await _run_body(engine, embedder, vector, settings, say=say)
+    finally:
+        await vector.close()
+
+
+async def _run_body(engine, embedder, vector, settings: Settings, say=print) -> None:
     repo = Repository(engine, settings, embedder, vector)
 
     # 1) 偶像信息
     items = parse_xlsx(XLSX)
     changed = await repo.upsert_idol_infos(items)
-    print(f"idol_infos：解析 {len(items)} 条，新增/变更 {len(changed)} 条")
+    say(f"idol_infos：解析 {len(items)} 条，新增/变更 {len(changed)} 条")
 
     # 2) 歌曲 + 歌词
     songs = merge_song_assets()
-    print(f"songs：归并后 {len(songs)} 首")
+    say(f"songs：归并后 {len(songs)} 首")
     song_items = [
         {
             "song_title": s.song_title,
@@ -252,16 +271,16 @@ async def _run_body(engine, embedder, vector) -> None:
     for s in songs:
         sid = norm_to_id.get(_norm_title(s.song_title))
         if sid is None:
-            print(f"  警告：未找到歌曲行 {s.song_title}")
+            say(f"  警告：未找到歌曲行 {s.song_title}")
             continue
         if s.lyric_segments:
             lyric_total += len(await repo.replace_lyrics_for_song(sid, s.lyric_segments))
-    print(f"idol_lyrics：歌词段落 {lyric_total} 段（累计 active）")
+    say(f"idol_lyrics：歌词段落 {lyric_total} 段（累计 active）")
 
     # 3) 向量对账
     ups, dele = await _reconcile_vectors(repo, vector, embedder)
-    print(f"qdrant：写入 {ups} 点，删除孤儿 {dele} 点")
-    print("知识摄入完成 ✅")
+    say(f"qdrant：写入 {ups} 点，删除孤儿 {dele} 点")
+    say("知识摄入完成 ✅")
 
 
 def _meta(s: SongAsset, key: str) -> str:
