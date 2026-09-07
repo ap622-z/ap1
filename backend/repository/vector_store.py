@@ -67,17 +67,24 @@ class VectorStore:
     async def upsert_vectors(
         self, points: list[tuple[int, list[float], dict[str, Any]]]
     ) -> None:
-        """points: (point_id int, vector, payload)。同 id 覆盖写入，幂等。"""
+        """points: (point_id int, vector, payload)。同 id 覆盖写入，幂等。
+
+        分批上传（每批 ≤64 点），避免单请求体超 qdrant 上限（1024 维向量一批
+        ≈1-2MB；全量一次可能数十 MB 被拒）。
+        """
         if not points:
             return
         c = await self._client_or()
-        await c.upsert(
-            collection_name=self._settings.qdrant_collection,
-            points=[
-                models.PointStruct(id=pid, vector=vec, payload=payload)
-                for pid, vec, payload in points
-            ],
-        )
+        name = self._settings.qdrant_collection
+        for i in range(0, len(points), 64):
+            batch = points[i : i + 64]
+            await c.upsert(
+                collection_name=name,
+                points=[
+                    models.PointStruct(id=pid, vector=vec, payload=payload)
+                    for pid, vec, payload in batch
+                ],
+            )
 
     async def delete_by_ids(self, point_ids: list[int]) -> None:
         if not point_ids:
