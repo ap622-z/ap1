@@ -47,6 +47,7 @@ services:
   app:
     build:
       context: .
+      target: backend
     container_name: ap1-app
     environment:
       ENV: dev
@@ -86,6 +87,23 @@ services:
       timeout: 5s
       retries: 12
       start_period: 60s
+
+  nginx:
+    build:
+      context: .
+      target: web
+    container_name: ap1-nginx
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
 volumes:
   ap1_mysql_data:

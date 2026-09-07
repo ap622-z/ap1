@@ -1,17 +1,17 @@
-"""FastAPI 应用工厂：web + worker + agent 单例同驻单进程。"""
+"""FastAPI 应用工厂：web + worker + agent 单例同驻单进程（纯 API）。
+
+前端静态由 nginx 前门托管，本进程只暴露 /api（含 /api/docs）与健康检查。
+"""
 
 from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from pathlib import Path
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
 from backend.api import router as api_router
 from backend.config import get_settings
@@ -20,9 +20,6 @@ from backend.context import build_runtime
 from backend.errors import AppError
 from backend.logging_setup import setup_logging
 from backend.repository.db import create_async_engine_for, migrate
-
-_FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
-
 
 _log = None
 
@@ -116,27 +113,6 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(api_router, prefix="/api")
-
-    # 前端静态（微信式单会话网页）由同一进程托管
-    if _FRONTEND_DIST.is_dir():
-        _dist = _FRONTEND_DIST.resolve()
-        app.mount("/assets", StaticFiles(directory=_dist / "assets"), name="assets")
-
-        @app.get("/")
-        async def index() -> FileResponse:
-            return FileResponse(_dist / "index.html")
-
-        @app.get("/{path:path}")
-        async def spa_fallback(path: str) -> FileResponse:
-            # 防目录穿越：解析后必须仍落在 dist 内，否则回退 index
-            candidate = (_dist / path).resolve()
-            if candidate.is_relative_to(_dist) and candidate.is_file():
-                return FileResponse(candidate)
-            return FileResponse(_dist / "index.html")
-    else:
-        @app.get("/")
-        async def root() -> dict[str, Any]:
-            return {"message": "AP1 偶像 Agent — 前端未构建，访问 /api 文档"}
 
     return app
 
