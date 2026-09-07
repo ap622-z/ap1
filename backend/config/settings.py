@@ -7,7 +7,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+# 项目根 .env：config 现位于 backend/config/，向上两级即仓库根
+_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):

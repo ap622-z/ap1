@@ -17,11 +17,11 @@ from pathlib import Path
 
 import openpyxl
 
+from backend.agent.embeddings import build_embedder
 from backend.config import Settings, get_settings
-from backend.db import create_async_engine_for, migrate
-from backend.embeddings import build_embedder
-from backend.repository import Repository
-from backend.vector_store import (
+from backend.repository.db import create_async_engine_for, migrate
+from backend.repository.repository import Repository
+from backend.repository.vector_store import (
     KIND_IDOL_INFO,
     KIND_LYRIC,
     KIND_SONG,

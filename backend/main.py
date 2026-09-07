@@ -16,9 +16,9 @@ from fastapi.staticfiles import StaticFiles
 from backend.api import router as api_router
 from backend.config import get_settings
 from backend.context import build_runtime
-from backend.db import create_async_engine_for, migrate
 from backend.errors import AppError
 from backend.logging_setup import setup_logging
+from backend.repository.db import create_async_engine_for, migrate
 
 _FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 

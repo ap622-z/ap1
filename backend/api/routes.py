@@ -5,10 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
-from backend.deps import require_scope
+from backend.api.deps import require_scope
+from backend.api.security import generate_nickname, generate_token, hash_token
 from backend.errors import UnauthorizedError
-from backend.scope import Scope
-from backend.security import generate_nickname, generate_token, hash_token
+from backend.repository.scope import Scope
 
 router = APIRouter()
 

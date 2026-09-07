@@ -12,16 +12,14 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from backend.capabilities import (
-    CapabilityRunner,
-    question_skill_trigger,
-)
+from backend.agent.capabilities import CapabilityRunner
+from backend.agent.providers import LLMProvider
+from backend.agent.skill import question_skill_trigger
 from backend.config import Settings
 from backend.logging_setup import get_logger
-from backend.providers import LLMProvider
-from backend.records import AgentRunResult, MessageRow, ToolRecord
-from backend.repository import Repository
-from backend.scope import Scope
+from backend.repository.records import AgentRunResult, MessageRow, ToolRecord
+from backend.repository.repository import Repository
+from backend.repository.scope import Scope
 
 PERSONA = (
     "你是一位温暖、体贴、会认真倾听的偶像，正在和一位一直支持你的粉丝聊天。"

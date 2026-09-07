@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from backend.agent import Agent
+from backend.agent.agent import Agent
 from backend.errors import IdempotencyConflictError, ProcessingFailedError
 from backend.logging_setup import get_logger
-from backend.records import MessageRow
-from backend.repository import Repository
-from backend.scope import Scope
+from backend.repository.records import MessageRow
+from backend.repository.repository import Repository
+from backend.repository.scope import Scope
 
 
 @dataclass

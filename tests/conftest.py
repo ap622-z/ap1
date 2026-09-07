@@ -42,7 +42,7 @@ def _free_port() -> int:
 def _prepare_test_db(env: dict) -> None:
     """建测试库并授权；调用真实迁移。"""
     from backend.config import Settings
-    from backend.db import migrate
+    from backend.repository.db import migrate
 
     s = Settings(
         ENV=TEST_ENV,
@@ -71,11 +71,11 @@ def _seed_knowledge(env: dict) -> None:
     """向测试库/集合灌入少量真实数据（走 repository/vector 真实代码路径）。"""
     import asyncio
 
+    from backend.agent.embeddings import build_embedder
     from backend.config import Settings
-    from backend.db import create_async_engine_for
-    from backend.embeddings import build_embedder
-    from backend.repository import Repository
-    from backend.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore, point_id
+    from backend.repository.db import create_async_engine_for
+    from backend.repository.repository import Repository
+    from backend.repository.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore, point_id
 
     s = Settings(
         ENV=TEST_ENV,

@@ -300,11 +300,11 @@ def test_stale_knowledge_not_recalled_after_removal(e2e, db):
     """知识下架（status=0 + 删向量）后，检索不再回引该过期内容。"""
     import asyncio
 
+    from backend.agent.embeddings import build_embedder
     from backend.config import Settings
-    from backend.db import create_async_engine_for
-    from backend.embeddings import build_embedder
-    from backend.repository import Repository
-    from backend.vector_store import KIND_IDOL_INFO, VectorStore, point_id
+    from backend.repository.db import create_async_engine_for
+    from backend.repository.repository import Repository
+    from backend.repository.vector_store import KIND_IDOL_INFO, VectorStore, point_id
 
     s = Settings(
         ENV="test", MYSQL_DB="ap1_test", MYSQL_HOST="127.0.0.1", MYSQL_PORT=3307,

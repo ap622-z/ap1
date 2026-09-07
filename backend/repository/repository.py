@@ -16,15 +16,14 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from backend.config import Settings
-from backend.embeddings import Embedder
 from backend.errors import SessionOutOfScopeError
-from backend.records import (
+from backend.repository.records import (
     IdolInfoRow,
     LyricRow,
     MessageRow,
@@ -33,9 +32,12 @@ from backend.records import (
     ToolRecord,
     UserRow,
 )
-from backend.scope import Scope
-from backend.tokens import estimate_tokens
-from backend.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore
+from backend.repository.scope import Scope
+from backend.repository.tokens import estimate_tokens
+from backend.repository.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore
+
+if TYPE_CHECKING:  # 仅类型标注用：避免数据层在运行时反向依赖执行层
+    from backend.agent.embeddings import Embedder
 
 
 def _now() -> datetime:
@@ -568,7 +570,7 @@ class Repository:
         content_hash 是同一条知识的稳定身份：命中已上架行 → 跳过；命中已下架行 →
         重新上架（复用原 id，避免重复行）；否则插入。
         """
-        from backend.hashing import sha256_hex
+        from backend.repository.hashing import sha256_hex
 
         changed: list[IdolInfoRow] = []
         async with self._engine.begin() as conn:
@@ -629,7 +631,7 @@ class Repository:
 
     async def upsert_songs(self, items: list[dict[str, Any]]) -> list[SongRow]:
         """song_title 为归并键；intro 有变更则改行并标记需重新向量化。"""
-        from backend.hashing import sha256_hex
+        from backend.repository.hashing import sha256_hex
 
         changed: list[SongRow] = []
         async with self._engine.begin() as conn:
@@ -706,7 +708,7 @@ class Repository:
         段内容变化才更新（content_hash 变则需重新向量化）；超出新段数的旧段下架
         （status=0，向量点由摄入脚本清扫删除）。重跑不产生重复行、段 id 保持稳定。
         """
-        from backend.hashing import sha256_hex
+        from backend.repository.hashing import sha256_hex
 
         async with self._engine.begin() as conn:
             res = await conn.execute(

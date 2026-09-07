@@ -6,15 +6,15 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from backend.agent import Agent
-from backend.capabilities import CapabilityRunner
+from backend.agent.agent import Agent
+from backend.agent.capabilities import CapabilityRunner
+from backend.agent.embeddings import Embedder, build_embedder
+from backend.agent.providers import LLMProvider, WebSearchProvider
 from backend.config import Settings
-from backend.embeddings import Embedder, build_embedder
-from backend.mailbox import Mailbox
-from backend.providers import LLMProvider, WebSearchProvider
-from backend.repository import Repository
-from backend.vector_store import VectorStore
-from backend.worker import Worker
+from backend.repository.repository import Repository
+from backend.repository.vector_store import VectorStore
+from backend.worker.mailbox import Mailbox
+from backend.worker.worker import Worker
 
 
 @dataclass
