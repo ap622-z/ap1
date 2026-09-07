@@ -21,10 +21,10 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-editable
 
-COPY app ./app
+COPY backend ./backend
 # 摄入素材打进镜像：空知识库启动时自动灌入（seed_on_startup）
 COPY doc/asset ./doc/asset
 COPY --from=frontend /fe/dist ./frontend/dist
 
 EXPOSE 8000
-CMD ["uv", "run", "--no-dev", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "--no-dev", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

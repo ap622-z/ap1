@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from app.config import Settings
+from backend.config import Settings
 
 
 def estimate_tokens(text: str, settings: Settings) -> int:

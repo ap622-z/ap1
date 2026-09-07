@@ -5,7 +5,7 @@
 - MySQL 侧按 content_hash / (song_id, seg_no) 幂等；
 - qdrant 侧以「DB 活跃集合 ↔ 集合存量」全量对账：活跃行重写向量，孤儿/过期点删除。
 
-用法：uv run python -m app.cli.ingest
+用法：uv run python -m backend.cli.ingest
 """
 
 from __future__ import annotations
@@ -17,11 +17,11 @@ from pathlib import Path
 
 import openpyxl
 
-from app.config import Settings, get_settings
-from app.db import create_async_engine_for, migrate
-from app.embeddings import build_embedder
-from app.repository import Repository
-from app.vector_store import (
+from backend.config import Settings, get_settings
+from backend.db import create_async_engine_for, migrate
+from backend.embeddings import build_embedder
+from backend.repository import Repository
+from backend.vector_store import (
     KIND_IDOL_INFO,
     KIND_LYRIC,
     KIND_SONG,

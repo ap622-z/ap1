@@ -14,7 +14,7 @@ from typing import Any
 
 from qdrant_client import AsyncQdrantClient, models
 
-from app.config import Settings
+from backend.config import Settings
 
 KIND_IDOL_INFO = "idol_info"
 KIND_SONG = "song"

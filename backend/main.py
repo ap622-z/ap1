@@ -13,12 +13,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import router as api_router
-from app.config import get_settings
-from app.context import build_runtime
-from app.db import create_async_engine_for, migrate
-from app.errors import AppError
-from app.logging_setup import setup_logging
+from backend.api import router as api_router
+from backend.config import get_settings
+from backend.context import build_runtime
+from backend.db import create_async_engine_for, migrate
+from backend.errors import AppError
+from backend.logging_setup import setup_logging
 
 _FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global _log
     settings = get_settings()
     setup_logging(settings)
-    from app.logging_setup import get_logger
+    from backend.logging_setup import get_logger
 
     _log = get_logger("startup")
     # 骨架启动：幂等 DDL（dev 直接应用，与 docker compose 初始化同步）
@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await runtime.vector.ensure_collection(await runtime.embedder.ensure_dim())
     # 容器自包含：知识库为空时自动摄入（幂等），做到 docker compose up 即开即用
     if settings.seed_on_startup and await runtime.repo.count_idol_infos() == 0:
-        from app.cli.ingest import ingest_knowledge
+        from backend.cli.ingest import ingest_knowledge
 
         _log.info("knowledge_empty_seed_start")
         try:

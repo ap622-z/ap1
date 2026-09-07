@@ -10,7 +10,7 @@ import logging
 import sys
 from typing import Any
 
-from app.config import Settings
+from backend.config import Settings
 
 _RESERVED = {
     "name", "msg", "args", "levelname", "levelno", "pathname", "filename",

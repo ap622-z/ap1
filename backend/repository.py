@@ -21,10 +21,10 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
-from app.config import Settings
-from app.embeddings import Embedder
-from app.errors import SessionOutOfScopeError
-from app.records import (
+from backend.config import Settings
+from backend.embeddings import Embedder
+from backend.errors import SessionOutOfScopeError
+from backend.records import (
     IdolInfoRow,
     LyricRow,
     MessageRow,
@@ -33,9 +33,9 @@ from app.records import (
     ToolRecord,
     UserRow,
 )
-from app.scope import Scope
-from app.tokens import estimate_tokens
-from app.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore
+from backend.scope import Scope
+from backend.tokens import estimate_tokens
+from backend.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore
 
 
 def _now() -> datetime:
@@ -568,7 +568,7 @@ class Repository:
         content_hash 是同一条知识的稳定身份：命中已上架行 → 跳过；命中已下架行 →
         重新上架（复用原 id，避免重复行）；否则插入。
         """
-        from app.hashing import sha256_hex
+        from backend.hashing import sha256_hex
 
         changed: list[IdolInfoRow] = []
         async with self._engine.begin() as conn:
@@ -629,7 +629,7 @@ class Repository:
 
     async def upsert_songs(self, items: list[dict[str, Any]]) -> list[SongRow]:
         """song_title 为归并键；intro 有变更则改行并标记需重新向量化。"""
-        from app.hashing import sha256_hex
+        from backend.hashing import sha256_hex
 
         changed: list[SongRow] = []
         async with self._engine.begin() as conn:
@@ -706,7 +706,7 @@ class Repository:
         段内容变化才更新（content_hash 变则需重新向量化）；超出新段数的旧段下架
         （status=0，向量点由摄入脚本清扫删除）。重跑不产生重复行、段 id 保持稳定。
         """
-        from app.hashing import sha256_hex
+        from backend.hashing import sha256_hex
 
         async with self._engine.begin() as conn:
             res = await conn.execute(

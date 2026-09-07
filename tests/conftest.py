@@ -41,8 +41,8 @@ def _free_port() -> int:
 
 def _prepare_test_db(env: dict) -> None:
     """建测试库并授权；调用真实迁移。"""
-    from app.config import Settings
-    from app.db import migrate
+    from backend.config import Settings
+    from backend.db import migrate
 
     s = Settings(
         ENV=TEST_ENV,
@@ -71,11 +71,11 @@ def _seed_knowledge(env: dict) -> None:
     """向测试库/集合灌入少量真实数据（走 repository/vector 真实代码路径）。"""
     import asyncio
 
-    from app.config import Settings
-    from app.db import create_async_engine_for
-    from app.embeddings import build_embedder
-    from app.repository import Repository
-    from app.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore, point_id
+    from backend.config import Settings
+    from backend.db import create_async_engine_for
+    from backend.embeddings import build_embedder
+    from backend.repository import Repository
+    from backend.vector_store import KIND_IDOL_INFO, KIND_LYRIC, KIND_SONG, VectorStore, point_id
 
     s = Settings(
         ENV=TEST_ENV,
@@ -177,7 +177,7 @@ def e2e(tmp_path_factory):
 
     proc = subprocess.Popen(
         [
-            sys.executable, "-m", "uvicorn", "app.main:app",
+            sys.executable, "-m", "uvicorn", "backend.main:app",
             "--host", "127.0.0.1", "--port", str(app_port), "--log-level", "warning",
         ],
         cwd=str(ROOT),

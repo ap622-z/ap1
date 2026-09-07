@@ -11,9 +11,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.errors import CapabilityUnavailableError
-from app.providers import WebSearchProvider
-from app.repository import Repository
+from backend.errors import CapabilityUnavailableError
+from backend.providers import WebSearchProvider
+from backend.repository import Repository
 
 # ---------------------------------------------------------------------------
 # 技能（skill）：提问 —— 行为指导而非函数

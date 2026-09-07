@@ -16,7 +16,7 @@ import math
 
 import httpx
 
-from app.config import Settings
+from backend.config import Settings
 
 
 class Embedder:

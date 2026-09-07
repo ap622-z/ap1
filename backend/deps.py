@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from fastapi import Depends, Header, Request
 
-from app.config import Settings, get_settings
-from app.errors import UnauthorizedError
-from app.scope import Scope
-from app.security import hash_token
+from backend.config import Settings, get_settings
+from backend.errors import UnauthorizedError
+from backend.scope import Scope
+from backend.security import hash_token
 
 
 async def get_runtime(request: Request):
