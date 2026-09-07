@@ -61,7 +61,7 @@ services:
       # 模型/搜索/嵌入密钥由宿主 .env 或环境注入；未配则启动校验阻止并给出指引
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
       LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-ds-v4-flash}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-v4-flash}
       SEARCH_BASE_URL: ${SEARCH_BASE_URL:-https://api.tavily.com}
       SEARCH_API_KEY: ${SEARCH_API_KEY:-}
       EMBED_PROVIDER: ${EMBED_PROVIDER:-local}

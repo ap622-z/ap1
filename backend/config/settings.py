@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # ---- 模型（DeepSeek / OpenAI 兼容 chat）----
     llm_base_url: str = "https://api.deepseek.com"  # OpenAI 兼容
     llm_api_key: str = ""
-    llm_model: str = "ds-v4-flash"
+    llm_model: str = "deepseek-v4-flash"
     llm_max_tokens: int = 1024
 
     # ---- 联网搜索 mcp（Tavily，API 兼容）----
