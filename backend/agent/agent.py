@@ -12,6 +12,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
+import httpx
+
 from backend.agent.capabilities import CapabilityRunner
 from backend.agent.providers import LLMProvider
 from backend.agent.skill import question_skill_trigger
@@ -80,7 +82,13 @@ class Agent:
                 log_step.warning("step_budget_exceeded", step=step, max_steps=max_steps)
                 reply_text = "（这边有点绕住了，先说到这吧——你再说一次，我一定好好接住。）"
                 break
-            result = await self._call_llm(messages, step, scope, log_step)
+            try:
+                result = await self._call_llm(messages, step, scope, log_step)
+            except httpx.HTTPError as exc:
+                # 外部模型不可用（断网 / 上游 4xx/5xx）→ 体面兜底，不中断会话；ERROR 告警
+                log_step.error("llm_unavailable", step=step, component="llm", error=str(exc))
+                reply_text = "（哎呀，我这边好像卡了一下，没能好好接住你——稍等一小会儿再跟我说一遍，好吗？）"
+                break
             if not result.tool_calls:
                 reply_text = result.content.strip() or "（我好像没听清，可以再说一遍吗？）"
                 log_step.info("step_finish_text", step=step)
@@ -107,8 +115,8 @@ class Agent:
                 log_step.info("tool_call", step=step, tool=tc["name"])
                 try:
                     output = await self._runner.run(tc["name"], tc["arguments"])
-                except Exception as exc:  # 工具失败不 abort run，交还模型重新决策
-                    log_step.warning("tool_failed", step=step, tool=tc["name"], error=str(exc))
+                except Exception as exc:  # 工具失败不 abort run，交还模型重新决策；ERROR 告警
+                    log_step.error("tool_failed", step=step, component=tc["name"], error=str(exc))
                     output = {
                         "ok": False,
                         "message": f"该能力暂不可用（{exc}），请如实告知用户并尝试其它方式。",
@@ -284,12 +292,8 @@ class Agent:
         self, messages: list[dict[str, Any]], step: int, scope: Scope, log_step: Any
     ) -> Any:
         tools = self._runner.tool_specs
-        try:
-            return await self._llm.chat(
-                messages,
-                tools=tools,
-                max_tokens=self._settings.llm_max_tokens,
-            )
-        except Exception as exc:
-            log_step.error("llm_failed", step=step, error=str(exc))
-            raise
+        return await self._llm.chat(
+            messages,
+            tools=tools,
+            max_tokens=self._settings.llm_max_tokens,
+        )

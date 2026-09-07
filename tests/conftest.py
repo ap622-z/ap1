@@ -293,6 +293,7 @@ def brain():
     b = stub_servers.ModelHandler.brain
     yield b
     b.fail_once = False
+    b.malformed = False
     b.loop_forever = False
 
 

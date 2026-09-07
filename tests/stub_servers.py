@@ -23,7 +23,8 @@ class ModelBrain:
     """决定桩模型“想做什么”。可在测试内替换策略以覆盖不同场景。"""
 
     def __init__(self) -> None:
-        self.fail_once = False  # 置 True 后下一次 chat 请求返回 500，之后恢复
+        self.fail_once = False  # 置 True 后下一次 chat 请求返回 500，之后恢复（外部能力故障）
+        self.malformed = False  # 置 True 后下一次 chat 返回 200 但缺 choices → 内部解析失败（处理中故障）
         self.loop_forever = False  # 置 True 后永远返回工具调用（测单 run 最大步数护栏）
 
     def decide(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -122,6 +123,10 @@ class ModelHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
         if self.path.endswith("/chat/completions"):
+            if self.brain.malformed:  # 内部解析失败路径：200 但无 choices
+                self.brain.malformed = False
+                self._send(200, {"id": "chatcmpl-malformed", "object": "chat.completion"})
+                return
             try:
                 choice = self.brain.decide(body)
             except RuntimeError:

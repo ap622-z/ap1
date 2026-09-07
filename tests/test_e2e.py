@@ -257,9 +257,9 @@ def test_summary_scoped_to_own_session(api):
 # 失败重发（故事 27）
 # ---------------------------------------------------------------------------
 def test_failed_processing_resend_recovers_no_dup(brain, api, db):
-    """中途失败重发：消息不丢、不重复，最终恰好一次回复。"""
+    """处理中故障（内部解析失败）重发：消息不丢、不重复，最终恰好一次回复（故事 27）。"""
     reg = _fresh(api)
-    brain.fail_once = True
+    brain.malformed = True
     r1 = api.send_raw(reg["token"], "这条会先失败", "fail-1")
     assert r1.status_code == 500
     # 消息仍可见（received 而非消失）
@@ -272,6 +272,22 @@ def test_failed_processing_resend_recovers_no_dup(brain, api, db):
     hist = api.history(reg["token"])
     agents = [m for m in hist if m["type"] == "agent"]
     assert len(agents) == 1
+
+
+# ---------------------------------------------------------------------------
+# 能力故障体面兜底（故事 22 / MVP+ A10）
+# ---------------------------------------------------------------------------
+def test_llm_outage_graceful_and_session_alive(brain, api):
+    """外部模型不可用（HTTP 层故障）→ 收到体面回复、会话不中断。"""
+    reg = _fresh(api)
+    brain.fail_once = True  # 下一次 chat 请求返回 500
+    r1 = api.send(reg["token"], "在吗", "grace-1")
+    text = r1["reply"]["text"]
+    assert text
+    assert "AI" not in text and "模型" not in text  # 人设不破
+    # 会话仍可用：紧接着的正常消息得到回复（未中断、未卡锁）
+    r2 = api.send(reg["token"], "在吗", "grace-2")
+    assert r2["reply"]["text"]
 
 
 # ---------------------------------------------------------------------------
