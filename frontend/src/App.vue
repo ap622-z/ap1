@@ -112,6 +112,7 @@ async function send() {
     await api.send(text, clientId);
     clearPendingFail();
     await loadHistory(); // 以服务端为准重建列表（占位随之消失）
+    sending.value = false;
   } catch (err) {
     // 失败：记录该条，气泡转可重发态
     failedClientId.value = clientId;
@@ -133,6 +134,7 @@ async function retryLast() {
     await api.send(text, clientId);
     clearPendingFail();
     await loadHistory();
+    sending.value = false;
   } catch {
     // 仍失败：保持可重发态
     sending.value = false;
@@ -188,9 +190,6 @@ onMounted(() => {
               发送未完成，点此重发
             </button>
           </div>
-        </div>
-        <div v-if="sending" class="bubble-row theirs">
-          <div class="bubble typing"><span class="dot" />正在输入…</div>
         </div>
       </div>
       <footer>
@@ -408,9 +407,6 @@ button.ghost {
   background: #f7f7f7;
   border-radius: 8px;
   padding: 3px 10px;
-}
-.bubble.typing .dot {
-  display: inline-block;
 }
 footer {
   display: flex;
