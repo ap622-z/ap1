@@ -6,6 +6,10 @@ const nickname = ref(localStorage.getItem("ap1_nickname") || "");
 const token = ref(localStorage.getItem("ap1_token") || "");
 const loggedIn = computed(() => !!nickname.value && !!token.value);
 
+// 登录表单的输入草稿（与「已认证身份」分开：只在按钮点击后落身份，避免打字即跳转）
+const loginNickname = ref("");
+const loginToken = ref("");
+
 const messages = ref([]);
 const input = ref("");
 const sending = ref(false);
@@ -16,7 +20,7 @@ const listEl = ref(null);
 const freshToken = ref(""); // 注册返回的一次性令牌（仅当次展示）
 
 async function doRegister() {
-  const data = await api.register(nickname.value || null);
+  const data = await api.register(loginNickname.value || null);
   nickname.value = data.nickname;
   token.value = data.token;
   localStorage.setItem("ap1_nickname", data.nickname);
@@ -30,9 +34,13 @@ async function dismissFreshToken() {
 }
 
 async function doLogin() {
-  await api.login(nickname.value.trim(), token.value.trim());
-  localStorage.setItem("ap1_nickname", nickname.value.trim());
-  localStorage.setItem("ap1_token", token.value.trim());
+  const n = loginNickname.value.trim();
+  const t = loginToken.value.trim();
+  await api.login(n, t);
+  nickname.value = n;
+  token.value = t;
+  localStorage.setItem("ap1_nickname", n);
+  localStorage.setItem("ap1_token", t);
   await enter();
 }
 
@@ -143,10 +151,10 @@ onMounted(() => {
       <h1>与偶像聊聊</h1>
       <p class="hint">注册即得属于你的唯一会话；凭昵称 + 令牌登录可恢复历史。</p>
       <div class="row">
-        <input v-model="nickname" placeholder="昵称（可留空自动生成）" />
+        <input v-model="loginNickname" placeholder="昵称（可留空自动生成）" />
       </div>
       <div class="row">
-        <input v-model="token" placeholder="登录令牌" />
+        <input v-model="loginToken" placeholder="登录令牌" />
       </div>
       <div class="actions">
         <button class="primary" @click="doRegister">注册 / 进入</button>
@@ -162,6 +170,9 @@ onMounted(() => {
         <button class="logout" @click="logout">退出</button>
       </header>
       <div ref="listEl" class="list">
+        <div v-if="messages.length === 0 && !sending" class="empty-hint">
+          还没有消息，和偶像打个招呼吧～
+        </div>
         <div
           v-for="m in messages"
           :key="m.id"
@@ -308,6 +319,12 @@ button.ghost {
   flex: 1;
   overflow-y: auto;
   padding: 16px 12px;
+}
+.empty-hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 40px;
 }
 .bubble-row {
   display: flex;
