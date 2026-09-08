@@ -1,6 +1,6 @@
 # 技术选型
 
-项目技术栈清单
+- 项目技术栈的唯一事实源；随迭代就地更新、不按版本复制。
 
 ## 中间件
 
@@ -14,4 +14,4 @@
 
 - **docker**：全部依赖与项目运行/打包方式
 
-> MVP 仅启用 mysql / redis / qdrant；nginx、rabbitmq 为目标架构引入（见版本 plan）。
+> 当前启用 mysql / redis / qdrant；nginx、rabbitmq 为目标架构引入。
